@@ -7,7 +7,7 @@ namespace PolicyPremium.Api.Storage;
 /// Thread-safe in-memory store. Registered as a singleton, so quotes live for the lifetime
 /// of the process only — no database by design.
 /// </summary>
-public class InMemoryQuoteRepository : IQuoteRepository
+public sealed class InMemoryQuoteRepository : IQuoteRepository
 {
     private readonly ConcurrentDictionary<Guid, Quote> _quotes = new();
 

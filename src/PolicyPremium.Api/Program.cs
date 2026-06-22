@@ -1,8 +1,8 @@
-using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Nodes;
 using PolicyPremium.Api.Contracts;
 using PolicyPremium.Api.Domain;
 using PolicyPremium.Api.Storage;
+using PolicyPremium.Api.Validation;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -28,20 +28,19 @@ builder.Services.AddOpenApi(options =>
         return Task.CompletedTask;
     });
 
-    // [Range], [Required] etc. flow into the schema automatically, but [AllowedValues] does not.
-    // Project it onto the schema's `enum` so Swagger advertises the permitted values as a list.
+    // [Range], [Required] etc. flow into the schema automatically, but [EnumName] does not.
+    // Project its permitted names onto the schema's `enum` so Swagger advertises them as a list.
     options.AddSchemaTransformer((schema, context, _) =>
     {
-        var allowed = context.JsonPropertyInfo?.AttributeProvider?
-            .GetCustomAttributes(typeof(AllowedValuesAttribute), inherit: false)
-            .Cast<AllowedValuesAttribute>()
+        var enumName = context.JsonPropertyInfo?.AttributeProvider?
+            .GetCustomAttributes(typeof(EnumNameAttribute), inherit: false)
+            .Cast<EnumNameAttribute>()
             .FirstOrDefault();
 
-        if (allowed is not null)
+        if (enumName is not null)
         {
-            schema.Enum = allowed.Values
-                .Where(value => value is not null)
-                .Select(value => JsonValue.Create(value!.ToString()) as JsonNode)
+            schema.Enum = enumName.Names
+                .Select(name => JsonValue.Create(name) as JsonNode)
                 .ToList()!;
         }
 
@@ -71,9 +70,9 @@ app.MapGet("/health", () => Results.Ok(new { status = "Healthy", timestamp = Dat
 
 app.MapPost("/quotes", (QuoteRequest request, IQuoteRepository repository) =>
 {
-    // Validation (above) has already guaranteed these are permitted enum names.
-    var coverage = Enum.Parse<CoverageType>(request.Coverage);
-    var region = Enum.Parse<Region>(request.Region);
+    // Validation (above) has already guaranteed these are permitted enum names (any case).
+    var coverage = Enum.Parse<CoverageType>(request.Coverage, ignoreCase: true);
+    var region = Enum.Parse<Region>(request.Region, ignoreCase: true);
 
     var premium = PremiumCalculator.Calculate(
         request.SumInsured, coverage, region, request.PriorClaims);

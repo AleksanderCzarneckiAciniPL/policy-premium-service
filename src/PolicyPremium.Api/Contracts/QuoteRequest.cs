@@ -1,32 +1,25 @@
 using System.ComponentModel.DataAnnotations;
 using PolicyPremium.Api.Domain;
+using PolicyPremium.Api.Validation;
 
 namespace PolicyPremium.Api.Contracts;
 
 /// <summary>
 /// Incoming quote request.
 ///
-/// Coverage and Region are accepted as strings so an unsupported value produces a clear,
-/// field-keyed validation message rather than an opaque JSON-deserialization failure. The
-/// data-annotation attributes both enforce the rules at runtime (returning an RFC 9457
+/// Coverage and Region are accepted as case-insensitive strings so an unsupported value produces
+/// a clear, field-keyed validation message rather than an opaque JSON-deserialization failure.
+/// The data-annotation attributes both enforce the rules at runtime (returning an RFC 9457
 /// validation problem) and flow into the generated OpenAPI schema — so Swagger advertises the
-/// permitted enum values and numeric bounds. <c>nameof</c> keeps the allowed strings tied to
-/// the <see cref="CoverageType"/> / <see cref="Region"/> enum members.
+/// permitted enum values and numeric bounds.
 /// </summary>
 public record QuoteRequest(
     [property: Required]
-    [property: AllowedValues(
-        nameof(CoverageType.Basic),
-        nameof(CoverageType.Standard),
-        nameof(CoverageType.Comprehensive),
+    [property: EnumName(typeof(CoverageType),
         ErrorMessage = "Unsupported coverage type. Supported values: Basic, Standard, Comprehensive.")]
     string Coverage,
     [property: Required]
-    [property: AllowedValues(
-        nameof(Region.LowRisk),
-        nameof(Region.Standard),
-        nameof(Region.Urban),
-        nameof(Region.Coastal),
+    [property: EnumName(typeof(Region),
         ErrorMessage = "Unsupported region. Supported values: LowRisk, Standard, Urban, Coastal.")]
     string Region,
     [property: Range(0.01, (double)decimal.MaxValue, ErrorMessage = "Sum insured must be greater than 0.")]

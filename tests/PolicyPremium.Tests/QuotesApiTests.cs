@@ -74,6 +74,28 @@ public class QuotesApiTests : IClassFixture<WebApplicationFactory<Program>>
     }
 
     [Fact]
+    public async Task PostQuote_AcceptsCoverageAndRegionInAnyCase()
+    {
+        var client = _factory.CreateClient();
+        var request = new
+        {
+            coverage = "comprehensive", // lower-case
+            region = "COASTAL", // upper-case
+            sumInsured = 100_000m,
+            priorClaims = 2,
+        };
+
+        var response = await client.PostAsJsonAsync("/quotes", request);
+        var quote = await response.Content.ReadFromJsonAsync<QuoteResponse>();
+
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        // Echoed back in their canonical enum spelling, and priced identically to the exact-case request.
+        quote!.Coverage.Should().Be("Comprehensive");
+        quote.Region.Should().Be("Coastal");
+        quote.Premium.Should().Be(1080.00m);
+    }
+
+    [Fact]
     public async Task PostQuote_WithInvalidRequest_Returns400()
     {
         var client = _factory.CreateClient();

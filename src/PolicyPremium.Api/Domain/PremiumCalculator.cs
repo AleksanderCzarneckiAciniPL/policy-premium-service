@@ -10,6 +10,9 @@ namespace PolicyPremium.Api.Domain;
 ///   claims loading  = +10% per prior claim, capped at +50%
 ///   minimum premium = 100.00
 ///   final premium is rounded to two decimal places.
+///
+/// Rejects a non-positive sum insured or a negative claims count with
+/// <see cref="ArgumentOutOfRangeException"/>.
 /// </summary>
 public static class PremiumCalculator
 {
@@ -20,6 +23,9 @@ public static class PremiumCalculator
 
     public static decimal Calculate(decimal sumInsured, CoverageType coverage, Region region, int priorClaims)
     {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(sumInsured);
+        ArgumentOutOfRangeException.ThrowIfNegative(priorClaims);
+
         var basePremium = sumInsured * BaseRate;
         var coverageFactor = CoverageFactor(coverage);
         var regionFactor = RegionFactor(region);

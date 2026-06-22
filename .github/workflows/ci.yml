@@ -22,14 +22,21 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj', 'global.json') }}
+          restore-keys: ${{ runner.os }}-nuget-
+
       - name: Restore
         run: dotnet restore PolicyPremium.sln
 
       - name: Check formatting
         run: dotnet format PolicyPremium.sln --verify-no-changes --no-restore --verbosity diagnostic
 
-  test:
-    name: Test
+  build:
+    name: Build
     runs-on: ubuntu-latest
     needs: lint
     steps:
@@ -41,16 +48,23 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj', 'global.json') }}
+          restore-keys: ${{ runner.os }}-nuget-
+
       - name: Restore
         run: dotnet restore PolicyPremium.sln
 
-      - name: Test
-        run: dotnet test PolicyPremium.sln --configuration Release --no-restore --verbosity normal
+      - name: Build
+        run: dotnet build PolicyPremium.sln --configuration Release --no-restore
 
-  build:
-    name: Build
+  test:
+    name: Test
     runs-on: ubuntu-latest
-    needs: test
+    needs: build
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -60,16 +74,23 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj', 'global.json') }}
+          restore-keys: ${{ runner.os }}-nuget-
+
       - name: Restore
         run: dotnet restore PolicyPremium.sln
 
-      - name: Build
-        run: dotnet build PolicyPremium.sln --configuration Release --no-restore
+      - name: Test
+        run: dotnet test PolicyPremium.sln --configuration Release --no-restore --verbosity normal
 
   docker-build:
     name: Docker build
     runs-on: ubuntu-latest
-    needs: build
+    needs: test
     steps:
       - name: Checkout
         uses: actions/checkout@v4

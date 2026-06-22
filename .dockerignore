@@ -1,0 +1,9 @@
+**/bin/
+**/obj/
+**/.vs/
+.git/
+.github/
+.idea/
+*.user
+README.md
+REFLECTION.md

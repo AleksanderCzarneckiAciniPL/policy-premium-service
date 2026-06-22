@@ -1,0 +1,9 @@
+services:
+  api:
+    build: .
+    image: policy-premium-service
+    ports:
+      - "8080:8080"
+    environment:
+      # Development surfaces the Swagger UI at http://localhost:8080/swagger.
+      - ASPNETCORE_ENVIRONMENT=Development

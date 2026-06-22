@@ -77,10 +77,14 @@ jobs:
       - name: Build Docker image
         run: docker build -t policy-premium-service:${{ github.sha }} .
 
+      # Only persist the image when commits land on master (i.e. a PR has been merged).
+      # On PR builds the image is still built above as a gate, but not saved or uploaded.
       - name: Save image to tarball
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
         run: docker save policy-premium-service:${{ github.sha }} -o policy-premium-service.tar
 
       - name: Upload image artifact
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
         uses: actions/upload-artifact@v4
         with:
           name: policy-premium-service-image

@@ -33,19 +33,11 @@ public static class PremiumCalculator
 
         var premium = basePremium * coverageFactor * regionFactor * (1m + claimsLoading);
 
-        if (premium < MinimumPremium)
-        {
-            premium = MinimumPremium;
-        }
-
-        return Math.Round(premium, 2, MidpointRounding.AwayFromZero);
+        return Math.Round(Math.Max(premium, MinimumPremium), 2, MidpointRounding.AwayFromZero);
     }
 
-    private static decimal ClaimsLoading(int priorClaims)
-    {
-        var loading = priorClaims * ClaimLoadingPerClaim;
-        return loading > MaxClaimLoading ? MaxClaimLoading : loading;
-    }
+    private static decimal ClaimsLoading(int priorClaims) =>
+        Math.Min(priorClaims * ClaimLoadingPerClaim, MaxClaimLoading);
 
     private static decimal CoverageFactor(CoverageType coverage) => coverage switch
     {

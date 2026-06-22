@@ -1,6 +1,23 @@
 @PolicyPremium.Api_HostAddress = http://localhost:5187
 
-GET {{PolicyPremium.Api_HostAddress}}/weatherforecast/
+### Health check
+GET {{PolicyPremium.Api_HostAddress}}/health
+Accept: application/json
+
+### Create a quote
+# @name createQuote
+POST {{PolicyPremium.Api_HostAddress}}/quotes
+Content-Type: application/json
+
+{
+  "coverage": "Comprehensive",
+  "region": "Coastal",
+  "sumInsured": 250000,
+  "priorClaims": 2
+}
+
+### Retrieve the quote created above
+GET {{PolicyPremium.Api_HostAddress}}/quotes/{{createQuote.response.body.$.id}}
 Accept: application/json
 
 ###

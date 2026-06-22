@@ -1,41 +1,65 @@
+using PolicyPremium.Api.Contracts;
+using PolicyPremium.Api.Domain;
+using PolicyPremium.Api.Storage;
+using PolicyPremium.Api.Validation;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
+builder.Services.AddSingleton<IQuoteRepository, InMemoryQuoteRepository>();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/openapi/v1.json", "Policy Premium API v1");
+        options.DocumentTitle = "Policy Premium API";
+    });
 }
 
-app.UseHttpsRedirection();
+app.MapGet("/health", () => Results.Ok(new { status = "Healthy", timestamp = DateTimeOffset.UtcNow }))
+    .WithName("Health");
 
-var summaries = new[]
+app.MapPost("/quotes", (QuoteRequest request, IQuoteRepository repository) =>
 {
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
+    if (!QuoteRequestValidator.TryValidate(request, out var coverage, out var region, out var errors))
+    {
+        return Results.ValidationProblem(errors);
+    }
 
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
+    var premium = PremiumCalculator.Calculate(request.SumInsured, coverage, region, request.PriorClaims);
+
+    var quote = new Quote(
+        Guid.NewGuid(),
+        coverage,
+        region,
+        request.SumInsured,
+        request.PriorClaims,
+        premium,
+        DateTimeOffset.UtcNow);
+
+    repository.Add(quote);
+
+    var response = QuoteResponse.FromQuote(quote);
+    return Results.Created($"/quotes/{quote.Id}", response);
 })
-.WithName("GetWeatherForecast");
+.WithName("CreateQuote");
+
+app.MapGet("/quotes/{id:guid}", (Guid id, IQuoteRepository repository) =>
+{
+    var quote = repository.GetById(id);
+    return quote is null
+        ? Results.NotFound()
+        : Results.Ok(QuoteResponse.FromQuote(quote));
+})
+.WithName("GetQuote");
 
 app.Run();
 
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
+/// <summary>
+/// Exposed so <c>WebApplicationFactory</c> can host the app for integration tests.
+/// </summary>
+public partial class Program;

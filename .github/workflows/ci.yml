@@ -10,10 +10,9 @@ permissions:
   contents: read
 
 jobs:
-  build-test-lint:
-    name: Build, test and lint
+  lint:
+    name: Lint
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -23,26 +22,52 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
-      - name: Display .NET info
-        run: dotnet --info
-
       - name: Restore
         run: dotnet restore PolicyPremium.sln
 
       - name: Check formatting
-        run: dotnet format PolicyPremium.sln --verify-no-changes --verbosity diagnostic
+        run: dotnet format PolicyPremium.sln --verify-no-changes --no-restore --verbosity diagnostic
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore
+        run: dotnet restore PolicyPremium.sln
 
       - name: Build
         run: dotnet build PolicyPremium.sln --configuration Release --no-restore
 
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore
+        run: dotnet restore PolicyPremium.sln
+
       - name: Test
-        run: dotnet test PolicyPremium.sln --configuration Release --no-build --verbosity normal
+        run: dotnet test PolicyPremium.sln --configuration Release --no-restore --verbosity normal
 
   docker-build:
     name: Docker build
     runs-on: ubuntu-latest
-    needs: build-test-lint
-
+    needs: [lint, build, test]
     steps:
       - name: Checkout
         uses: actions/checkout@v4

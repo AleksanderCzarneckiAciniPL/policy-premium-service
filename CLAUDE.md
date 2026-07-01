@@ -25,13 +25,37 @@ Implement only:
 
 Persistence is in-memory only.
 
+All endpoints are documented via OpenAPI/Swagger (served at `/swagger` in Development),
+including the permitted enum values and numeric bounds.
+
+## Project structure
+
+```
+src/PolicyPremium.Api
+  Domain/        # Quote, enums, PremiumCalculator (pure rating logic)
+  Contracts/     # Request/response DTOs
+  Validation/    # EnumName validation attribute
+  Storage/       # IQuoteRepository + in-memory implementation
+  Endpoints/     # Minimal API route groups (health, quotes)
+  Extensions/    # OpenAPI/Swagger configuration
+  Program.cs     # Composition root
+tests/PolicyPremium.Tests   # Unit (PremiumCalculator) + API/integration tests
+```
+
 ## Business rules
 
-Use simple, documented premium rules.
+Premium is calculated as:
 
-Example:
+```
+premium = max(
+  100,
+  sumInsured * 0.005 * coverageMultiplier * regionMultiplier * claimsMultiplier
+)
+```
 
-- Base premium = sum insured * 0.005
+rounded to two decimal places (away from zero).
+
+- Base rate = sum insured * 0.005
 - Coverage multiplier:
     - Basic: 1.00
     - Standard: 1.25
@@ -47,15 +71,24 @@ Example:
 - Minimum premium:
     - 100.00
 
-Round the final premium to two decimal places.
+### Validation
+
+- `coverage` and `region` are accepted as case-insensitive strings matching the enum names
+  (echoed back in canonical spelling); unknown values are rejected with an RFC 9457 validation
+  problem.
+- `sumInsured` must be greater than 0; `priorClaims` must be 0 or greater.
 
 ## Engineering expectations
 
 - Meaningful commit history
-- Automated CI on push and pull request
-- CI runs restore, format check, build, tests and Docker build
+- Automated CI on push to `master` and on pull request, as ordered, separately reported checks:
+  lint (format check) -> build -> test -> Docker build -> mocked deploy
+- CI caches NuGet restore; the Docker image is saved and uploaded as a workflow artifact only on
+  merge to `master`, where a mocked deploy (a `production` GitHub Environment + simulated rollout)
+  consumes it. Nothing is pushed to a registry
+- Branch protection on `master` can require the lint/build/test/Docker build checks
 - Unit tests for premium calculation
-- API/integration tests for quote creation and retrieval
+- API/integration tests for quote creation and retrieval (via `WebApplicationFactory`)
 - Dockerfile and docker-compose.yml
 - README.md explaining:
     - how to run
@@ -75,7 +108,7 @@ Round the final premium to two decimal places.
 
 - No database
 - No authentication
-- No cloud-specific infrastructure unless mocked
+- No cloud-specific infrastructure unless mocked (deployment is mocked; no registry push)
 - No secrets
 - No unnecessary abstractions
 - Prefer clear code over clever code
